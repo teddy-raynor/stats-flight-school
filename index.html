@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Stats Flight School</title>
+<meta name="description" content="Stats Flight School — Duolingo-style statistics training for postgrads. Earn your wings, one p-value at a time.">
+<meta name="theme-color" content="#0E7C86">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Stats Flight School">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+:root{
+  --bg1:#E9F2F8;--bg2:#F4F8F5;
+  --ink:#16324A;--muted:#5E7A8E;--card:#FFFFFF;
+  --accent:#0E7C86;--accent-deep:#0A5C64;--honey:#E9A23B;
+  --good:#12A150;--goodbg:#E8F7EE;--bad:#D6455D;--badbg:#FBEDF0;
+  --line:#DCE9F1;--radius:18px;--shadow:0 6px 20px rgba(22,50,74,.10);--nav-h:64px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{font-size:16px}
+body{
+  font-family:ui-rounded,-apple-system,BlinkMacSystemFont,"SF Pro Rounded","Segoe UI",system-ui,sans-serif;
+  color:var(--ink);min-height:100dvh;
+  background:
+    radial-gradient(rgba(22,50,74,.055) 1px, transparent 1.5px),
+    linear-gradient(165deg,var(--bg1) 0%,var(--bg2) 100%);
+  background-size:22px 22px,cover;
+  background-attachment:fixed;
+  overscroll-behavior-y:none;
+}
+#fx{position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:90}
+.app{max-width:520px;margin:0 auto;padding:calc(12px + env(safe-area-inset-top)) 16px calc(var(--nav-h) + 30px + env(safe-area-inset-bottom))}
+button{cursor:pointer;touch-action:manipulation;font-family:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
+/* ---------- header ---------- */
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px 2px 14px}
+.brand .t{font-size:1.18rem;font-weight:800;letter-spacing:-.01em;color:var(--ink)}
+.brand .s{font-size:.66rem;font-weight:700;color:var(--muted)}
+.statbar{display:flex;gap:6px}
+.chip{display:flex;align-items:center;gap:4px;background:#fff;border:1.5px solid var(--line);
+  border-radius:999px;padding:7px 11px;font-weight:800;font-size:.82rem;color:var(--ink);box-shadow:var(--shadow)}
+/* ---------- cards & common ---------- */
+.card{background:var(--card);border:1.5px solid var(--line);border-radius:var(--radius);padding:16px 17px;box-shadow:var(--shadow);margin-bottom:14px}
+.eyebrow{font-size:.66rem;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.muted{color:var(--muted);font-size:.8rem;font-weight:600}
+.btn{border:0;border-radius:13px;padding:13px 18px;font-weight:800;font-size:.92rem;color:#fff;
+  background:var(--accent);box-shadow:0 3px 0 var(--accent-deep)}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--accent-deep)}
+.btn.ghost{background:#EDF4F8;color:var(--accent);box-shadow:none}
+.btn.good{background:var(--good);box-shadow:0 3px 0 #0C7A3C}
+.btn:disabled{opacity:.45;box-shadow:none}
+.linkbtn{border:0;background:none;color:var(--accent);font-weight:800;font-size:.76rem;padding:6px 4px}
+.empty{padding:18px 6px;text-align:center;color:var(--muted);font-size:.85rem;font-weight:600}
+/* ---------- goal ring ---------- */
+.goalcard{display:flex;align-items:center;gap:14px}
+.goalring{position:relative;width:64px;height:64px;flex:none}
+.goalring svg{transform:rotate(-90deg)}
+.goalring .n{position:absolute;inset:0;display:grid;place-items:center;font-weight:800;font-size:.8rem}
+/* ---------- path ---------- */
+.unit-head{margin:22px 4px 30px;display:flex;align-items:center;gap:10px;
+  background:var(--ink);color:#fff;border-radius:16px;padding:13px 15px;box-shadow:var(--shadow)}
+.unit-head .ic{font-size:1.4rem}
+.unit-head .t{font-weight:800;font-size:.98rem;line-height:1.2}
+.unit-head .d{font-size:.7rem;font-weight:600;opacity:.85}
+.path{position:relative;display:flex;flex-direction:column;align-items:center;padding:4px 0 8px}
+.node-row{display:flex;justify-content:center;width:100%;margin-bottom:34px}
+.node-row.l{justify-content:flex-start;padding-left:18%}
+.node-row.r{justify-content:flex-end;padding-right:18%}
+.node{position:relative;width:76px;height:76px;border-radius:999px;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:#fff;border:2.5px solid var(--line);box-shadow:0 5px 0 #D3E2EA;color:var(--ink)}
+.node .ic{font-size:1.6rem;line-height:1.1}
+.node .stars{font-size:.6rem;letter-spacing:1px;color:var(--honey);font-weight:900;margin-top:1px}
+.node.done{background:var(--accent);border-color:var(--accent);box-shadow:0 5px 0 var(--accent-deep);color:#fff}
+.node.locked{background:#EDF2F6;border-color:#E2EAF0;box-shadow:0 5px 0 #E2EAF0;color:#A9BCC9;filter:saturate(.5)}
+.node.next{border-color:var(--accent);animation:pulse 2.4s ease-in-out infinite}
+.node.next::after{content:"START";position:absolute;top:-26px;left:50%;transform:translateX(-50%);
+  background:var(--accent);color:#fff;font-size:.58rem;font-weight:900;letter-spacing:.08em;padding:4px 10px;border-radius:999px;box-shadow:var(--shadow);white-space:nowrap}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.node .lbl{position:absolute;top:80px;left:50%;transform:translateX(-50%);width:132px;text-align:center;
+  color:var(--muted);font-size:.66rem;font-weight:800;line-height:1.25;pointer-events:none}
+/* ---------- lesson player ---------- */
+#player{position:fixed;inset:0;z-index:70;display:none;flex-direction:column;overflow:hidden;
+  background:
+    radial-gradient(rgba(22,50,74,.05) 1px, transparent 1.5px),
+    linear-gradient(165deg,var(--bg1) 0%,var(--bg2) 100%);
+  background-size:22px 22px,cover}
+#player.on{display:flex}
+.pl-top{display:flex;align-items:center;gap:12px;padding:calc(12px + env(safe-area-inset-top)) 16px 10px;max-width:520px;margin:0 auto;width:100%}
+.pl-x{border:0;background:#E3EDF3;color:var(--muted);width:36px;height:36px;border-radius:999px;font-size:1rem;font-weight:800;flex:none}
+.pl-bar{flex:1;height:14px;background:#DDE9F0;border-radius:999px;overflow:hidden}
+.pl-bar .fill{height:100%;width:0%;border-radius:999px;background:linear-gradient(90deg,var(--accent),#3FB8A6);transition:width .3s}
+.pl-hearts{color:var(--bad);font-weight:800;font-size:.9rem;flex:none}
+.pl-body{flex:1;overflow:auto;width:100%}
+.pl-in{max-width:520px;margin:0 auto;padding:8px 18px 150px}
+.qkind{color:var(--accent);font-weight:800;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;margin:6px 2px 8px}
+.qtext{color:var(--ink);font-size:1.12rem;font-weight:800;line-height:1.4;margin-bottom:14px}
+.qctx{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:13px 15px;font-size:.86rem;font-weight:600;line-height:1.5;margin-bottom:14px;box-shadow:var(--shadow)}
+.qctx table{border-collapse:collapse;width:100%;font-size:.8rem}
+.qctx th,.qctx td{border-bottom:1.5px solid var(--line);padding:6px 8px;text-align:left;font-variant-numeric:tabular-nums}
+.qctx th{color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.06em}
+.choices{display:flex;flex-direction:column;gap:9px}
+.choice{border:2px solid var(--line);border-radius:14px;background:#fff;color:var(--ink);
+  padding:14px 15px;font-size:.92rem;font-weight:700;text-align:left;line-height:1.35;box-shadow:0 3px 0 #E4EDF3}
+.choice.sel{border-color:var(--accent);background:#EFF8F8;box-shadow:0 3px 0 #BFDFE1}
+.choice.correct{border-color:var(--good);background:var(--goodbg);color:#0B5E32;box-shadow:0 3px 0 #BFE5CC}
+.choice.wrong{border-color:var(--bad);background:var(--badbg);color:#8E2438;box-shadow:0 3px 0 #EFC3CC}
+.choice:disabled{opacity:1}
+.numwrap{background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow)}
+.numval{border:2px solid var(--line);border-radius:12px;background:#F7FAFC;font-size:1.5rem;font-weight:800;text-align:center;padding:10px;min-height:56px;font-variant-numeric:tabular-nums}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.pad button{border:0;border-radius:12px;background:#EDF4F8;color:var(--ink);font-size:1.15rem;font-weight:800;padding:13px;box-shadow:0 2px 0 #DAE7EF}
+.pad button:active{background:#DFEBF2;transform:translateY(1px)}
+/* feedback panel */
+.pl-foot{position:absolute;left:0;right:0;bottom:0}
+.fb{max-width:520px;margin:0 auto;padding:14px 18px calc(16px + env(safe-area-inset-bottom));border-radius:20px 20px 0 0;display:none;box-shadow:0 -8px 24px rgba(22,50,74,.12)}
+.fb.show{display:block}
+.fb.ok{background:var(--goodbg)}
+.fb.no{background:var(--badbg)}
+.fb .h{display:flex;align-items:center;gap:8px;font-weight:900;font-size:1rem}
+.fb.ok .h{color:#0B5E32}
+.fb.no .h{color:#8E2438}
+.fb .ex{font-size:.82rem;font-weight:600;line-height:1.45;color:var(--ink);margin:7px 0 11px}
+.fb .btn{width:100%;padding:14px}
+.fb.ok .btn{background:var(--good);box-shadow:0 3px 0 #0C7A3C}
+.fb.no .btn{background:var(--bad);box-shadow:0 3px 0 #A82F45}
+.checkrow-foot{max-width:520px;margin:0 auto;padding:10px 18px calc(16px + env(safe-area-inset-bottom))}
+.checkrow-foot .btn{width:100%;padding:15px;font-size:1rem}
+/* end screen */
+.endwrap{max-width:520px;margin:0 auto;padding:60px 24px;text-align:center;color:var(--ink)}
+.endwrap .big{font-size:1.9rem;font-weight:800;margin-bottom:6px}
+.endwrap .stars-big{font-size:2.3rem;letter-spacing:6px;color:var(--honey);margin:10px 0}
+.endtiles{display:flex;gap:10px;justify-content:center;margin:18px 0 26px}
+.endtile{background:#fff;border:1.5px solid var(--line);color:var(--ink);border-radius:15px;padding:12px 18px;box-shadow:var(--shadow)}
+.endtile .n{font-size:1.3rem;font-weight:800}
+.endtile .l{font-size:.6rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+/* ---------- field notes ---------- */
+.fn-item{padding:11px 2px;border-bottom:1.5px solid #EDF3F7}
+.fn-item:last-child{border-bottom:0}
+.fn-item .q{font-size:.88rem;font-weight:700;line-height:1.35}
+.fn-item .meta{display:flex;gap:8px;align-items:center;margin-top:4px}
+.sheet-input{width:100%;border:2px solid var(--line);border-radius:13px;padding:11px 13px;font-size:16px;font-family:inherit;font-weight:600;color:var(--ink);outline:none;background:#fff}
+.sheet-input:focus{border-color:var(--accent)}
+textarea.sheet-input{min-height:64px;resize:none}
+.optrow{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.optrow .radio{width:26px;height:26px;flex:none;border-radius:999px;border:2.5px solid var(--line);background:#fff;color:#fff;font-weight:900;display:grid;place-items:center;padding:0}
+.optrow .radio.on{background:var(--good);border-color:var(--good)}
+/* ---------- stats ---------- */
+.tilegrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow);text-align:center}
+.tile .n{font-size:1.6rem;font-weight:800}
+.tile .l{font-size:.6rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+/* ---------- nav, sheets, toast ---------- */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-top:1.5px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.nav-in{max-width:520px;margin:0 auto;display:flex;height:var(--nav-h)}
+.navbtn{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#93A9B8;font-weight:800;font-size:.62rem}
+.navbtn .ico{font-size:1.28rem;line-height:1;filter:grayscale(.4) opacity(.75)}
+.navbtn.on{color:var(--accent)}
+.navbtn.on .ico{transform:scale(1.12);filter:none}
+.backdrop{position:fixed;inset:0;background:rgba(22,50,74,.42);z-index:75;opacity:0;pointer-events:none;transition:opacity .2s}
+.backdrop.show{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:76;background:#fff;border-radius:22px 22px 0 0;
+  padding:18px 18px calc(20px + env(safe-area-inset-bottom));max-width:520px;margin:0 auto;
+  transform:translateY(105%);transition:transform .25s cubic-bezier(.2,.8,.3,1);max-height:85dvh;overflow:auto}
+.sheet.show{transform:translateY(0)}
+.sheet h3{font-size:1.05rem;font-weight:800;margin-bottom:10px;padding-right:40px}
+.sheet label{display:block;font-size:.7rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;margin:12px 0 5px}
+.sheet .btn{width:100%;margin-top:12px;padding:13px;font-size:.92rem}
+.sheet-x{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:999px;border:0;background:#EDF4F8;color:var(--muted);font-size:1rem;font-weight:800}
+#toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + 22px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
+  background:var(--ink);color:#fff;font-weight:800;font-size:.82rem;padding:11px 18px;border-radius:999px;z-index:80;
+  opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;box-shadow:var(--shadow)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#storagenote{display:none;background:var(--ink);color:#fff;font-size:.72rem;font-weight:700;border-radius:12px;padding:9px 12px;margin-bottom:12px;text-align:center}
+.view{display:none}
+.view.on{display:block;animation:pop .28s ease}
+@keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas>
+
+<div class="app">
+  <div id="storagenote">Preview mode — progress won't be saved here. On your phone it will. 💾</div>
+
+  <header>
+    <div class="brand"><div class="t">Stats Flight School ✈️</div><div class="s" id="subtitle">Earn your wings, one p-value at a time</div></div>
+    <div class="statbar">
+      <button class="chip" data-act="streak-info">🔥<span id="streakn">0</span></button>
+      <button class="chip" data-act="hearts-info">❤️<span id="heartsn">5</span></button>
+    </div>
+  </header>
+
+  <!-- ============ LEARN (path) ============ -->
+  <section class="view on" id="view-learn">
+    <div class="card goalcard">
+      <div class="goalring">
+        <svg width="64" height="64" viewBox="0 0 64 64">
+          <circle cx="32" cy="32" r="26" fill="none" stroke="#F0EAF9" stroke-width="8"/>
+          <circle id="goalring" cx="32" cy="32" r="26" fill="none" stroke="url(#gg)" stroke-width="8" stroke-linecap="round"
+            stroke-dasharray="163.4" stroke-dashoffset="163.4"/>
+          <defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#7C3AED"/><stop offset="1" stop-color="#EC4899"/>
+          </linearGradient></defs>
+        </svg>
+        <div class="n" id="goaln">0%</div>
+      </div>
+      <div style="flex:1">
+        <div class="eyebrow" style="margin-bottom:2px">Daily goal</div>
+        <div style="font-weight:800;font-size:.95rem" id="goaltext">0 / 30 XP today</div>
+        <div class="muted" id="xptotal">0 XP total</div>
+      </div>
+      <button class="btn ghost" data-act="open-settings" aria-label="Settings">⚙️</button>
+    </div>
+    <div id="pathwrap"></div>
+  </section>
+
+  <!-- ============ PRACTICE ============ -->
+  <section class="view" id="view-practice">
+    <div class="card">
+      <div class="eyebrow">Practice pad</div>
+      <div style="font-weight:800;font-size:1rem;margin-bottom:6px">Review what you've flown 🛬</div>
+      <div class="muted" style="line-height:1.5;margin-bottom:12px">A quick 8-question mix from lessons you've completed and your Field Notes — weighted toward the ones that got you. Finish a round to win <b>+1 ❤️</b>.</div>
+      <button class="btn good" style="width:100%;padding:14px" data-act="start-practice">Start practice ❤️+1</button>
+      <div class="muted" id="pracpool" style="margin-top:9px;text-align:center"></div>
+    </div>
+  </section>
+
+  <!-- ============ FIELD NOTES ============ -->
+  <section class="view" id="view-notes">
+    <div class="card">
+      <div class="eyebrow">Field Notes — your own cards</div>
+      <div class="muted" style="line-height:1.5;margin-bottom:10px">Something bites you in real research? Turn it into a card while it's fresh. Your cards get mixed into every practice round.</div>
+      <button class="btn" style="width:100%;padding:13px" data-act="fn-add">＋ New card</button>
+    </div>
+    <div class="card"><div id="fnlist"></div></div>
+  </section>
+
+  <!-- ============ STATS ============ -->
+  <section class="view" id="view-stats">
+    <div class="tilegrid">
+      <div class="tile"><div class="n" id="st-xp">0</div><div class="l">Total XP</div></div>
+      <div class="tile"><div class="n" id="st-streak">0</div><div class="l">Day streak</div></div>
+      <div class="tile"><div class="n" id="st-lessons">0</div><div class="l">Lessons passed</div></div>
+      <div class="tile"><div class="n" id="st-acc">–</div><div class="l">First-try accuracy</div></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div class="eyebrow">Needs another pass</div>
+      <div id="weakest"></div>
+    </div>
+  </section>
+</div>
+
+<!-- ============ LESSON PLAYER ============ -->
+<div id="player">
+  <div class="pl-top">
+    <button class="pl-x" data-act="quit-lesson">✕</button>
+    <div class="pl-bar"><div class="fill" id="plfill"></div></div>
+    <div class="pl-hearts" id="plhearts">❤️5</div>
+  </div>
+  <div class="pl-body"><div class="pl-in" id="plbody"></div></div>
+  <div class="pl-foot">
+    <div class="checkrow-foot" id="checkrow"><button class="btn" id="checkbtn" data-act="check" disabled>Check</button></div>
+    <div class="fb" id="fb">
+      <div class="h" id="fbh"></div>
+      <div class="ex" id="fbex"></div>
+      <button class="btn" data-act="continue">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- nav -->
+<nav>
+  <div class="nav-in">
+    <button class="navbtn on" data-view="learn"><span class="ico">🗺️</span>Learn</button>
+    <button class="navbtn" data-view="practice"><span class="ico">🎯</span>Practice</button>
+    <button class="navbtn" data-view="notes"><span class="ico">📓</span>Field Notes</button>
+    <button class="navbtn" data-view="stats"><span class="ico">📈</span>Stats</button>
+  </div>
+</nav>
+
+<!-- sheets -->
+<div class="backdrop" id="backdrop" data-act="close-sheets"></div>
+
+<div class="sheet" id="lessonsheet">
+  <button class="sheet-x" data-act="close-sheets" aria-label="Close">✕</button>
+  <h3 id="ls-title">Lesson</h3>
+  <div class="muted" id="ls-sub" style="line-height:1.5"></div>
+  <button class="btn" id="ls-start" data-act="start-lesson">Start lesson ⚡+XP</button>
+</div>
+
+<div class="sheet" id="heartsheet">
+  <button class="sheet-x" data-act="close-sheets" aria-label="Close">✕</button>
+  <h3>💔 Out of hearts</h3>
+  <div class="muted" style="line-height:1.5">Wrong answers cost hearts, and you're out. Hearts refill by themselves (1 every 4 hours), or earn one right now by completing a practice round.</div>
+  <button class="btn good" data-act="practice-from-sheet">Practice to earn ❤️</button>
+</div>
+
+<div class="sheet" id="fnsheet">
+  <button class="sheet-x" data-act="close-sheets" aria-label="Close">✕</button>
+  <h3>📓 New Field Note</h3>
+  <label>The question / scenario</label>
+  <textarea class="sheet-input" id="fn-q" placeholder="e.g. In metafor with CR2 robust SEs, why might a moderator's variance come back ~zero?"></textarea>
+  <label>Options — tap the circle to mark the correct one</label>
+  <div class="optrow"><button class="radio on" data-fnradio="0">✓</button><input class="sheet-input" id="fn-o0" placeholder="Correct answer" autocomplete="off"></div>
+  <div class="optrow"><button class="radio" data-fnradio="1">✓</button><input class="sheet-input" id="fn-o1" placeholder="Distractor 1" autocomplete="off"></div>
+  <div class="optrow"><button class="radio" data-fnradio="2">✓</button><input class="sheet-input" id="fn-o2" placeholder="Distractor 2 (optional)" autocomplete="off"></div>
+  <div class="optrow"><button class="radio" data-fnradio="3">✓</button><input class="sheet-input" id="fn-o3" placeholder="Distractor 3 (optional)" autocomplete="off"></div>
+  <label>Why — the explanation future-you needs</label>
+  <textarea class="sheet-input" id="fn-ex" placeholder="The reason, the fix, the reference…"></textarea>
+  <button class="btn" data-act="fn-save">Save card</button>
+</div>
+
+<div class="sheet" id="setsheet">
+  <button class="sheet-x" data-act="close-sheets" aria-label="Close">✕</button>
+  <h3>⚙️ Settings</h3>
+  <label>Daily XP goal</label>
+  <div class="optrow" style="gap:6px" id="goalchips">
+    <button class="btn ghost" data-goal="20" style="flex:1;margin:0">20</button>
+    <button class="btn ghost" data-goal="30" style="flex:1;margin:0">30</button>
+    <button class="btn ghost" data-goal="50" style="flex:1;margin:0">50</button>
+  </div>
+  <label>Backup</label>
+  <div style="display:flex;gap:8px">
+    <button class="btn ghost" data-act="export-data" style="flex:1;margin-top:0">Export</button>
+    <button class="btn ghost" data-act="import-data" style="flex:1;margin-top:0">Import</button>
+  </div>
+  <textarea class="sheet-input" id="io" style="margin-top:10px" placeholder="Export puts your data here to copy. Paste a backup and tap Import to restore."></textarea>
+</div>
+
+<div id="toast"></div>
+<script>
+/* ================= CURRICULUM v0.1 — Units 1–3 ================= */
+/* item: t mcq|num · k kind-label · q question · ctx optional HTML · o options · a correct index · tol numeric tolerance · ex explanation */
+var CONTENT=[
+{id:"u1",icon:"🧱",title:"Unit 1 — Foundations",desc:"Variables, description, distributions",lessons:[
+ {id:"u1l1",title:"Variables & measurement",items:[
+  {t:"mcq",k:"Concept check",q:"“Sleep quality predicts anxiety symptoms.” In this study, sleep quality is the…",o:["Independent / predictor variable","Dependent / outcome variable","Confound","Moderator"],a:0,ex:"The variable doing the predicting is the IV/predictor; anxiety, the thing being predicted, is the DV/outcome."},
+  {t:"mcq",k:"Concept check",q:"Temperature in °C is measured on which scale?",o:["Interval","Ratio","Ordinal","Nominal"],a:0,ex:"Equal intervals but no true zero — 0°C isn't “no temperature”, and 20°C isn't twice as hot as 10°C."},
+  {t:"mcq",k:"Concept check",q:"Which is an ordinal variable?",o:["Finishing position in a race","Reaction time in ms","Eye colour","Height in cm"],a:0,ex:"Positions are ordered, but the gaps between them aren't equal — 1st vs 2nd can be a whisker or a mile."},
+  {t:"mcq",k:"True or false",q:"A participant ID number is a nominal variable.",o:["True","False"],a:0,ex:"It labels, it doesn't quantify — participant 20 isn't twice participant 10."},
+  {t:"mcq",k:"Concept check",q:"What does a ratio scale have that an interval scale lacks?",o:["A true zero point","Equal intervals","Ordered categories","Normally distributed scores"],a:0,ex:"A true zero makes ratio statements meaningful: 40 minutes of exercise really is twice 20."},
+  {t:"mcq",k:"Concept check",q:"Number of therapy sessions attended is…",o:["Discrete","Continuous","Nominal","Dichotomous"],a:0,ex:"You can attend 6 or 7 sessions, never 6.4 — countable values make it discrete."},
+  {t:"mcq",k:"Concept check",q:"Defining stress as “salivary cortisol concentration” is an example of…",o:["An operational definition","A construct","A hypothesis","A confound"],a:0,ex:"Operationalisation = specifying exactly how an abstract construct will be measured."},
+  {t:"mcq",k:"Choose the test",q:"Every participant completes BOTH the caffeine and placebo conditions. This design is…",o:["Within-subjects (repeated measures)","Between-subjects","Cross-sectional","Quasi-experimental"],a:0,ex:"Same people, every condition → within-subjects. Different people per condition would be between-subjects."}
+ ]},
+ {id:"u1l2",title:"Describing data",items:[
+  {t:"mcq",k:"Concept check",q:"Which measure of central tendency is most distorted by outliers?",o:["Mean","Median","Mode","Interquartile range"],a:0,ex:"The mean gets dragged toward extreme values; the median just cares about the middle position."},
+  {t:"mcq",k:"Concept check",q:"Reporting typical income (heavily right-skewed), you should prefer the…",o:["Median","Mean","Mode","Range"],a:0,ex:"With skew, the mean chases the tail (and the billionaires). The median resists."},
+  {t:"num",k:"Quick calculation",q:"Find the mean of: 2, 4, 6, 8, 10",a:6,tol:0.01,ex:"Sum = 30, n = 5, mean = 30 ÷ 5 = 6."},
+  {t:"mcq",k:"Concept check",q:"The standard error of the mean describes…",o:["How precisely the sample mean estimates the population mean","How spread out individual scores are","The width of the histogram","Measurement reliability"],a:0,ex:"SD describes people; SE describes the mean's precision. SE = SD/√n, so it shrinks as n grows."},
+  {t:"num",k:"Quick calculation",q:"SD = 10, n = 25. What is the standard error of the mean?",a:2,tol:0.01,ex:"SE = SD/√n = 10/√25 = 10/5 = 2."},
+  {t:"mcq",k:"Concept check",q:"In a positively skewed distribution, the long tail points…",o:["Right, and the mean sits above the median","Left, and the mean sits below the median","Right, and mean equals median","Nowhere — skew has no tail"],a:0,ex:"Positive skew = tail to the right; the mean gets pulled up the tail past the median."},
+  {t:"mcq",k:"True or false",q:"Adding 5 points to every score in a dataset increases the standard deviation.",o:["False","True"],a:0,ex:"Shifting everyone equally moves the mean but leaves spread untouched. Multiplying scores would change the SD."},
+  {t:"mcq",k:"Concept check",q:"Why do we usually report SD rather than variance?",o:["SD is in the original units of the variable","Variance can't be computed for small samples","SD is always smaller","Variance only works for normal data"],a:0,ex:"Variance lives in squared units (anxiety-points²!). Taking the square root brings it home."}
+ ]},
+ {id:"u1l3",title:"Distributions & sampling",items:[
+  {t:"mcq",k:"Concept check",q:"In a normal distribution, roughly what percentage of scores fall within ±1 SD of the mean?",o:["68%","95%","50%","99.7%"],a:0,ex:"The 68–95–99.7 rule: 1 SD ≈ 68%, 2 SDs ≈ 95%, 3 SDs ≈ 99.7%."},
+  {t:"num",k:"Quick calculation",q:"IQ: mean = 100, SD = 15. What is the z-score for an IQ of 130?",a:2,tol:0.01,ex:"z = (130 − 100)/15 = 30/15 = 2 — two SDs above the mean."},
+  {t:"mcq",k:"Concept check",q:"A z-score of −1.5 means the score is…",o:["1.5 SDs below the mean","1.5 points below the mean","In the bottom 1.5%","Impossible — z can't be negative"],a:0,ex:"z counts SDs from the mean; the sign gives direction."},
+  {t:"mcq",k:"Concept check",q:"The Central Limit Theorem says that as n increases…",o:["The sampling distribution of the mean approaches normal, whatever the population's shape","Individual scores become normally distributed","The population becomes normal","Skew increases"],a:0,ex:"CLT is about the distribution of MEANS across samples — that's why normal-theory tests survive non-normal populations at decent n."},
+  {t:"mcq",k:"True or false",q:"The sampling distribution of the mean has the same spread as the population distribution.",o:["False","True"],a:0,ex:"Means vary less than individuals: its SD is the standard error, σ/√n — always narrower for n > 1."},
+  {t:"mcq",k:"Concept check",q:"Quadrupling your sample size does what to the standard error?",o:["Halves it","Quarters it","Doubles it","Nothing"],a:0,ex:"SE = SD/√n, and √4 = 2 — so 4× the n buys you half the SE. Precision is bought at a square-root discount."},
+  {t:"mcq",k:"Concept check",q:"A sampling distribution is the distribution of…",o:["A statistic (like the mean) across many repeated samples","Raw scores in one sample","The population","Measurement errors"],a:0,ex:"Imagine re-running your study thousands of times and plotting each sample's mean — that pile of means is the sampling distribution."},
+  {t:"mcq",k:"Concept check",q:"The main statistical reason for random sampling is that it…",o:["Makes the sample representative of the population in expectation","Guarantees a normal distribution","Eliminates all sampling error","Increases the sample size"],a:0,ex:"Randomness kills systematic selection bias — error remains, but it's unbiased and quantifiable."}
+ ]}
+]},
+{id:"u2",icon:"⚖️",title:"Unit 2 — The Logic of Inference",desc:"Hypotheses, p-values, confidence intervals",lessons:[
+ {id:"u2l1",title:"Hypotheses & errors",items:[
+  {t:"mcq",k:"Concept check",q:"The null hypothesis (H₀) typically states that…",o:["There is no effect or no difference in the population","Your theory is correct","The sample means differ","The data are normally distributed"],a:0,ex:"H₀ is the skeptical default the data must argue against."},
+  {t:"mcq",k:"Concept check",q:"A Type I error is…",o:["Rejecting H₀ when it's actually true (false positive)","Failing to reject a false H₀ (miss)","Using the wrong test","A coding error"],a:0,ex:"Crying wolf: you declare an effect that isn't there. Its long-run rate is α."},
+  {t:"mcq",k:"Concept check",q:"A Type II error is…",o:["Failing to detect an effect that really exists","Detecting an effect that doesn't exist","Rejecting both hypotheses","A significant result with small n"],a:0,ex:"The miss: the effect was real, your study didn't catch it. Its probability is β; power = 1 − β."},
+  {t:"mcq",k:"Concept check",q:"Setting α = .05 means…",o:["If H₀ were true, you'd falsely reject it about 5% of the time in the long run","There's a 5% chance your hypothesis is wrong","5% of participants are outliers","Your effect is small"],a:0,ex:"α is your declared tolerance for false positives — a property of the procedure, not of any single result."},
+  {t:"mcq",k:"True or false",q:"Lowering α from .05 to .01 (all else equal) increases the risk of a Type II error.",o:["True","False"],a:0,ex:"Stricter evidence thresholds mean real effects are harder to detect — the classic Type I / Type II trade-off."},
+  {t:"mcq",k:"Concept check",q:"Statistical power is the probability of…",o:["Detecting an effect given that it truly exists","Making a Type I error","Getting p < .05 when H₀ is true","Replicating a study"],a:0,ex:"Power = 1 − β. It rises with bigger effects, bigger samples, and lower noise."},
+  {t:"mcq",k:"Choose the test",q:"A genuinely effective therapy is trialled, but the study (n = 12) finds no significant difference. This is most likely a…",o:["Type II error","Type I error","Correct decision","Ceiling effect"],a:0,ex:"Real effect + non-significant result = a miss, and tiny samples with low power are exactly where misses live."},
+  {t:"mcq",k:"Concept check",q:"“Participants in the mindfulness condition will report LOWER stress than controls” calls for…",o:["A directional (one-tailed) hypothesis","A non-directional (two-tailed) hypothesis","No hypothesis","A null hypothesis only"],a:0,ex:"A predicted direction = one-tailed — but pre-register it; choosing tails after peeking is p-hacking."}
+ ]},
+ {id:"u2l2",title:"p-values without tears",items:[
+  {t:"mcq",k:"Concept check",q:"A p-value is the probability of…",o:["Data this extreme (or more) IF the null hypothesis were true","The null hypothesis being true","The alternative hypothesis being true","Replication succeeding"],a:0,ex:"p conditions on H₀ — it's P(data | H₀), never P(H₀ | data). Most p-value myths die right here."},
+  {t:"mcq",k:"True or false",q:"p = .03 means there is a 3% chance the null hypothesis is true.",o:["False","True"],a:0,ex:"That reversal is the classic fallacy — p says how surprising the data are under H₀, not how likely H₀ is."},
+  {t:"mcq",k:"Concept check",q:"You get p = .06 with α = .05. The correct move is to…",o:["Fail to reject H₀ — and NOT claim the effect is proven absent","Declare the effect “marginally significant” and reject H₀","Accept H₀ as true","Switch to a one-tailed test"],a:0,ex:"Absence of evidence isn't evidence of absence — and retroactive tail-switching is how careers end."},
+  {t:"mcq",k:"Concept check",q:"“Statistically significant” does NOT necessarily mean…",o:["Practically important","p < α","Unlikely under H₀","Worth reporting"],a:0,ex:"With n = 50,000, a difference of 0.4 IQ points is significant. Significance is about detectability; importance is about effect size."},
+  {t:"mcq",k:"Quick calculation",q:"Two-tailed p = .08, and the effect ran in your predicted direction. The one-tailed p is…",o:[".04",".16",".08",".004"],a:0,ex:"With the direction matching the prediction, one-tailed p = two-tailed p ÷ 2."},
+  {t:"mcq",k:"True or false",q:"A very small p-value implies a large effect.",o:["False","True"],a:0,ex:"p mixes effect size WITH sample size — huge n makes tiny effects glow. Always read p alongside the effect size."},
+  {t:"mcq",k:"Concept check",q:"Running 20 tests at α = .05 with all nulls true, the expected number of “significant” results is…",o:["1","0","5","20"],a:0,ex:"20 × .05 = 1 false positive expected — the multiple-comparisons problem, and why corrections (Bonferroni, Holm, FDR) exist."},
+  {t:"mcq",k:"Concept check",q:"p = .51 is best interpreted as…",o:["The data are consistent with H₀; we can't rule the null in or out","Strong evidence H₀ is true","A 51% chance of no effect","The study failed"],a:0,ex:"High p = unsurprising data under H₀. To argue FOR no effect you'd need equivalence testing or Bayes factors."}
+ ]},
+ {id:"u2l3",title:"Confidence intervals",items:[
+  {t:"mcq",k:"Concept check",q:"The correct interpretation of “95% confidence” is…",o:["The procedure captures the true value in 95% of repeated samples","There's a 95% probability the true value is in THIS interval","95% of participants fall in this range","The result replicates 95% of the time"],a:0,ex:"Confidence belongs to the method, not the single interval — this one either contains the truth or it doesn't."},
+  {t:"mcq",k:"True or false",q:"“There is a 95% probability that the true mean lies within this specific interval” is a correct frequentist statement.",o:["False","True"],a:0,ex:"Tempting, but that's a Bayesian credible interval's job. The frequentist interval is fixed once computed."},
+  {t:"mcq",k:"Read the output",q:"A 95% CI for a mean difference is [0.2, 1.8]. At α = .05 (two-tailed), the difference is…",o:["Significant — the interval excludes 0","Non-significant — the interval is narrow","Impossible to judge from a CI","Significant only if n > 30"],a:0,ex:"A 95% CI excluding 0 ⇔ p < .05 two-tailed. CI and t-test are two windows on the same inference."},
+  {t:"mcq",k:"Read the output",q:"A 95% CI for Cohen's d runs from −0.10 to 0.62. This tells you…",o:["The effect is non-significant, and plausible values span ~zero to medium-large","The effect is significant","d is exactly 0.26","The study was underpowered by definition"],a:0,ex:"Zero is inside → ns. But look at the spread: the data can't tell a nothing from a solid effect — that's an imprecision problem."},
+  {t:"mcq",k:"Concept check",q:"The most direct way to make confidence intervals narrower is…",o:["Increase the sample size","Increase α to .10","Use a one-tailed test","Round the numbers"],a:0,ex:"Width tracks SE = SD/√n. More data, less variability, or (at a cost) lower confidence levels."},
+  {t:"num",k:"Quick calculation",q:"Mean = 50, SE = 2. The lower bound of the 95% CI (±1.96 × SE) is…",a:46.08,tol:0.15,ex:"50 − 1.96×2 = 50 − 3.92 = 46.08."},
+  {t:"mcq",k:"Concept check",q:"Compared with a 95% CI from the same data, a 99% CI is…",o:["Wider","Narrower","The same width","Impossible to compute"],a:0,ex:"More confidence demands a bigger net. Certainty is purchased with width."},
+  {t:"mcq",k:"Concept check",q:"The key advantage of a CI over a lone p-value is that it shows…",o:["The magnitude of the effect AND the precision of the estimate","Whether the null is true","The probability of replication","That the data are normal"],a:0,ex:"A CI answers “how big, and how sure?” — which is what your discussion section actually needs."}
+ ]}
+]},
+{id:"u3",icon:"🧪",title:"Unit 3 — The Classic Tests",desc:"t-tests, ANOVA, chi-square, correlation",lessons:[
+ {id:"u3l1",title:"The t-test family",items:[
+  {t:"mcq",k:"Choose the test",q:"Compare one sample's mean wellbeing score against the known national norm of 50. Which test?",o:["One-sample t-test","Independent-samples t-test","Paired-samples t-test","Chi-square"],a:0,ex:"One observed mean vs a fixed reference value = one-sample t."},
+  {t:"mcq",k:"Choose the test",q:"Anxiety measured in the SAME participants before and after therapy. Which test?",o:["Paired-samples t-test","Independent-samples t-test","One-sample t-test","Test of independence"],a:0,ex:"Same people, two time points → paired t on the difference scores."},
+  {t:"num",k:"Quick calculation",q:"Independent-samples t-test with n₁ = 20 and n₂ = 22. Degrees of freedom?",a:40,tol:0.01,ex:"df = n₁ + n₂ − 2 = 20 + 22 − 2 = 40."},
+  {t:"mcq",k:"Concept check",q:"We use t rather than z when…",o:["The population SD is unknown and estimated from the sample","n is over 100","Data are skewed","Comparing three or more groups"],a:0,ex:"Estimating σ with s adds uncertainty; t's heavier tails price that in, especially at small n."},
+  {t:"mcq",k:"True or false",q:"Welch's t-test does not assume equal group variances.",o:["True","False"],a:0,ex:"Welch adjusts the df instead of assuming homogeneity — many stats packages now (sensibly) default to it."},
+  {t:"mcq",k:"Concept check",q:"Under the hood, the paired t-test is a one-sample t-test on…",o:["The difference scores, against zero","The pooled scores","The larger group","The z-scores"],a:0,ex:"Subtract time 1 from time 2, then ask whether those differences average zero."},
+  {t:"mcq",k:"Read the output",ctx:"<table><tr><th></th><th>M</th><th>SD</th><th>n</th></tr><tr><td>Therapy</td><td>21.4</td><td>5.1</td><td>20</td></tr><tr><td>Control</td><td>25.6</td><td>5.6</td><td>20</td></tr></table><div style='margin-top:8px'><i>t</i>(38) = 2.45, <i>p</i> = .019, <i>d</i> = 0.78</div>",q:"At α = .05, the appropriate conclusion is…",o:["Reject H₀ — therapy scored significantly lower, a medium-to-large effect","Fail to reject H₀","Accept H₀ — no effect","The test is invalid because n < 30"],a:0,ex:"p = .019 < .05 and d = 0.78 is substantial. Report direction, magnitude, and the CI when you have it."},
+  {t:"mcq",k:"Concept check",q:"Which of these is NOT an assumption of the independent-samples t-test?",o:["Equal group sizes","Independence of observations","Normality of the sampling distribution","Homogeneity of variance (for the classic version)"],a:0,ex:"Unequal ns are fine (Welch handles variance differences too). Independence is the one you can't rescue statistically."}
+ ]},
+ {id:"u3l2",title:"ANOVA without fear",items:[
+  {t:"mcq",k:"Concept check",q:"With three groups, why run one ANOVA instead of three t-tests?",o:["Multiple t-tests inflate the familywise Type I error rate","ANOVA is more fashionable","t-tests can't handle three groups mathematically","ANOVA needs less data"],a:0,ex:"Three tests at .05 pushes your false-positive risk toward ~14%. The omnibus F keeps it at α."},
+  {t:"mcq",k:"Concept check",q:"The F statistic is the ratio of…",o:["Between-group variance to within-group variance","Mean to SD","Effect size to sample size","Signal to skew"],a:0,ex:"F = systematic differences ÷ noise. When groups truly differ, the numerator swells and F grows past 1."},
+  {t:"mcq",k:"Concept check",q:"Your omnibus F is significant. To find WHICH groups differ, you run…",o:["Post-hoc tests (e.g., Tukey's HSD)","More ANOVAs on subsets","A correlation","Nothing — F already says"],a:0,ex:"F is a smoke alarm, not a map. Post-hocs locate the fire while controlling familywise error."},
+  {t:"num",k:"Quick calculation",q:"One-way ANOVA: 3 groups, 30 participants total. The within-groups (error) df is…",a:27,tol:0.01,ex:"df_within = N − k = 30 − 3 = 27 (and df_between = k − 1 = 2)."},
+  {t:"mcq",k:"True or false",q:"An F statistic can be negative.",o:["False","True"],a:0,ex:"F is a ratio of variances, and variances can't be negative. An F below 1 just means less between-group difference than noise."},
+  {t:"mcq",k:"Concept check",q:"The power advantage of repeated-measures ANOVA comes from…",o:["Removing stable between-person differences from the error term","Having more groups","Larger critical values","Avoiding post-hocs"],a:0,ex:"Everyone serves as their own control, so individual differences stop counting as noise."},
+  {t:"mcq",k:"Concept check",q:"Sphericity is an assumption of…",o:["Repeated-measures ANOVA","Independent t-tests","Chi-square","Pearson correlation"],a:0,ex:"Equal variances of all pairwise difference scores. Mauchly tests it; Greenhouse–Geisser corrects it."},
+  {t:"mcq",k:"Read the output",ctx:"<div><i>F</i>(2, 57) = 4.20, <i>p</i> = .020, η² = .13</div>",q:"The best summary of this result is…",o:["Group membership was significantly associated with the outcome, explaining ~13% of variance","No significant differences","Exactly two groups differ","The effect is too small to matter"],a:0,ex:"Significant omnibus + η² = .13 (a medium-large share of variance). WHICH groups differ awaits the post-hocs."}
+ ]},
+ {id:"u3l3",title:"Chi-square, correlation & choosing",items:[
+  {t:"mcq",k:"Choose the test",q:"Is degree type (STEM vs non-STEM) associated with pet ownership (yes/no)? Which test?",o:["Chi-square test of independence","Independent t-test","Pearson correlation","One-way ANOVA"],a:0,ex:"Two categorical variables → chi-square of independence on the contingency table."},
+  {t:"mcq",k:"Concept check",q:"A standard rule of thumb for chi-square validity is…",o:["Expected counts of at least 5 per cell","Observed counts of at least 5 per cell","Equal group sizes","n > 100"],a:0,ex:"It's the EXPECTED counts that matter. Sparse cells → Fisher's exact test."},
+  {t:"mcq",k:"Concept check",q:"r = −.82 indicates…",o:["A strong negative linear relationship","A weak negative relationship","No relationship","That one variable causes the other"],a:0,ex:"Sign gives direction, magnitude gives strength — .82 is strong by any convention."},
+  {t:"mcq",k:"True or false",q:"A strong correlation between screen time and anxiety demonstrates that screen time causes anxiety.",o:["False","True"],a:0,ex:"Direction could run either way, or a third variable could drive both. Correlation is a clue, not a verdict."},
+  {t:"num",k:"Quick calculation",q:"r = .50. What proportion of variance is shared (r²)?",a:0.25,tol:0.01,ex:"r² = .5² = .25 — a “large” correlation still leaves 75% of the variance unexplained."},
+  {t:"mcq",k:"Concept check",q:"Wellbeing rises with exercise up to a point, then falls (an inverted U). Pearson's r would likely be…",o:["Near zero, because r only captures LINEAR relationships","Strongly positive","Strongly negative","Exactly 1"],a:0,ex:"r is blind to curves. Always plot first — Anscombe's quartet is the cautionary tale."},
+  {t:"mcq",k:"Choose the test",q:"Compare continuous mindfulness scores between clinical and community samples. Which test?",o:["Independent-samples t-test","Chi-square","Paired t-test","Simple regression"],a:0,ex:"One continuous outcome, two unrelated groups → independent t (Welch's version for safety)."},
+  {t:"mcq",k:"Choose the test",q:"Predict thesis word count from weekly focus hours, with an equation and slope. Which analysis?",o:["Simple linear regression","Correlation only","One-way ANOVA","Chi-square"],a:0,ex:"Correlation quantifies association; regression gives you the prediction machinery — intercept, slope, residuals."}
+ ]}
+]}
+];
+/* ================= FIELD NOTES — seeded cards ================= */
+var FIELD_SEED=[
+ {id:"fn-seed1",q:"Multilevel meta-analysis in R (metafor + clubSandwich): you request CR2 cluster-robust SEs and a moderator's robust variance estimate comes back ≈ zero. Most likely culprit?",
+  o:["The moderator varies only between a small number of clusters, so the small-sample CR2 adjustment degenerates","The moderator's true effect is exactly zero","CR2 requires REML and you used ML","A package bug — reinstall clubSandwich"],a:0,
+  ex:"CR2 leans on the effective number of clusters. A moderator that's constant within clusters and varies across only a few of them (or is collinear with the cluster structure) can collapse the variance estimate toward zero. Check how many clusters actually carry information, use Satterthwaite dfs, consider the CHE working model, or aggregate effects."},
+ {id:"fn-seed2",q:"Your random-effects meta-analysis returns τ² = 0. The best reading is…",
+  o:["Observed between-study variability is no more than sampling error alone would predict — a boundary estimate, not proof the true effects are identical","All studies share exactly the same true effect, guaranteed","The model failed to converge","I² must have been computed wrongly"],a:0,
+  ex:"τ² is truncated at zero, so 0 often means “heterogeneity too small to detect given these studies.” Report the CI for τ² and a prediction interval before declaring homogeneity."},
+ {id:"fn-seed3",q:"I² = 75% in your meta-analysis means…",
+  o:["About 75% of the variability in effect ESTIMATES reflects between-study heterogeneity rather than sampling error","The pooled effect is wrong in 75% of studies","75% of studies are outliers","τ² = .75"],a:0,
+  ex:"I² is a proportion of variance, and it depends on the studies' precision — big studies inflate I² for the same τ². Read it alongside τ² and the prediction interval, not instead of them."}
+];
+</script>
+<script>
+(function(){
+"use strict";
+var BRAND={name:"Stats Flight School",tag:"Earn your wings, one p-value at a time"};
+var HEART_MAX=5, HEART_REGEN_MS=4*3600000, PRACTICE_SIZE=8;
+
+/* ============ storage ============ */
+var KEY="stats-flight-school-v1", mem={}, persistent=true;
+try{localStorage.setItem("__t","1");localStorage.removeItem("__t");}catch(e){persistent=false;}
+function rawGet(){try{return persistent?localStorage.getItem(KEY):mem[KEY];}catch(e){return mem[KEY];}}
+function rawSet(v){try{if(persistent){localStorage.setItem(KEY,v);return;}}catch(e){}mem[KEY]=v;}
+if(!persistent){document.getElementById("storagenote").style.display="block";}
+
+/* ============ item index ============ */
+CONTENT.forEach(function(u){u.lessons.forEach(function(l){l.items.forEach(function(it,i){it.id=l.id+"-i"+i;});});});
+var LESSONS=[];CONTENT.forEach(function(u){u.lessons.forEach(function(l){LESSONS.push({unit:u,lesson:l});});});
+var ITEM_INDEX={};CONTENT.forEach(function(u){u.lessons.forEach(function(l){l.items.forEach(function(it){ITEM_INDEX[it.id]=it;});});});
+
+/* ============ state ============ */
+var DEFAULT={v:1,xp:0,goal:30,streak:{count:0,last:null},hearts:{n:HEART_MAX,last:0},
+  prog:{},wrong:{},cards:[],daily:{day:null,xp:0,goalHit:false},completions:0};
+var UNIT_FINAL={};CONTENT.forEach(function(u){UNIT_FINAL[u.lessons[u.lessons.length-1].id]=true;});
+var state;
+try{var saved=rawGet();state=saved?JSON.parse(saved):null;}catch(e){state=null;}
+if(!state||state.v!==1){state=JSON.parse(JSON.stringify(DEFAULT));state.hearts.last=Date.now();
+  state.cards=FIELD_SEED.map(function(c){return {id:c.id,q:c.q,o:c.o,a:c.a,ex:c.ex,added:Date.now()};});}
+if(state.completions==null){state.completions=0;}
+state.cards.forEach(function(c){ITEM_INDEX[c.id]={t:"mcq",k:"Field note",q:c.q,o:c.o,a:c.a,ex:c.ex,id:c.id};});
+function save(){rawSet(JSON.stringify(state));}
+function uid(){return "c"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function dayStr(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+var DAY=86400000;
+
+/* ============ toast & confetti ============ */
+var toastT=null;
+function toast(msg,ms){var t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");
+  clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove("show");},ms||2400);}
+/* ---- "datafall" engine: dots that rain and settle into a normal distribution ---- */
+var reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+var cv=document.getElementById("fx"),ctx=cv.getContext("2d"),parts=[],W=0,H=0,DPR=1;
+var DCOLORS=["#0E7C86","#E9A23B","#12A150","#D6455D","#4A90A4","#16324A"];
+var GLYPHS=["μ","σ","β","Σ","χ²","p"];
+var BINW=12,bins=[],rainCount=0;
+function sizeCanvas(){DPR=Math.min(window.devicePixelRatio||1,2);W=window.innerWidth;H=window.innerHeight;
+  cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);bins=new Array(Math.ceil(W/BINW)+1).fill(0);}
+sizeCanvas();window.addEventListener("resize",sizeCanvas);
+function randNorm(){var u=0,v=0;while(u===0){u=Math.random();}while(v===0){v=Math.random();}
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+/* small spark of data points (correct answers, saves) */
+function burst(x,y,n,power){if(reduced)return;power=power||1;
+  for(var i=0;i<n;i++){var ang=Math.random()*Math.PI*2,sp=(1.6+Math.random()*3.8)*power;
+    parts.push({mode:"spark",x:x,y:y,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp-2.6*power,
+      r:2.5+Math.random()*3,color:pick(DCOLORS),glyph:Math.random()<0.18?pick(GLYPHS):null,
+      ttl:55+Math.random()*30,age:0,alpha:1});}}
+function burstFrom(el,n,power){if(!el)return;var r=el.getBoundingClientRect();burst(r.left+r.width/2,r.top+r.height/2,n,power);}
+/* medium celebration: three soft sparks */
+function mega(){if(reduced)return;
+  for(var i=0;i<3;i++){(function(k){setTimeout(function(){burst(W*(0.3+0.2*k),H*0.3,20,1.1);},k*160);})(i);}}
+/* THE showpiece: data points fall and pile into a bell curve, μ line and all */
+function bellRain(n){if(reduced)return;n=n||110;
+  var base=H-96,center=W/2,sd=Math.max(40,W/7);
+  for(var i=0;i<n;i++){(function(k){setTimeout(function(){
+    var x=Math.min(W-8,Math.max(8,center+randNorm()*sd));
+    parts.push({mode:"rain",x:x,y:-12-Math.random()*50,vy:3.4+Math.random()*2.2,sway:Math.random()*6.3,
+      r:3.6+Math.random()*1.8,color:pick(DCOLORS),glyph:Math.random()<0.08?pick(GLYPHS):null,
+      base:base,landed:false,age:0,alpha:1});
+    rainCount++;},k*12);})(i);}
+}
+function frame(){
+  if(!document.hidden&&(parts.length||rainCount)){ctx.clearRect(0,0,W,H);
+    var anyRain=false;
+    for(var i=parts.length-1;i>=0;i--){var p=parts[i];p.age++;
+      if(p.mode==="spark"){
+        p.vy+=.11;p.vx*=.985;p.vy*=.985;p.x+=p.vx;p.y+=p.vy;
+        p.alpha=p.age>p.ttl-24?Math.max(0,(p.ttl-p.age)/24):1;
+        if(p.age>=p.ttl){parts.splice(i,1);continue;}
+      }else{ /* rain */
+        anyRain=true;
+        if(!p.landed){
+          p.sway+=.08;p.x+=Math.sin(p.sway)*.5;p.y+=p.vy;p.vy+=.09;
+          var bin=Math.max(0,Math.min(bins.length-1,Math.floor(p.x/BINW)));
+          var target=p.base-bins[bin]*7.2;
+          if(p.y>=target){p.y=target;p.landed=true;p.bin=bin;bins[bin]++;}
+        }else if(p.age>260){
+          p.alpha-=.05;
+          if(p.alpha<=0){parts.splice(i,1);rainCount--;
+            if(rainCount<=0){bins=new Array(Math.ceil(W/BINW)+1).fill(0);}
+            continue;}
+        }
+      }
+      ctx.save();ctx.globalAlpha=Math.max(0,p.alpha);
+      if(p.glyph){ctx.fillStyle=p.color;ctx.font="800 "+Math.round(p.r*4.6)+"px ui-rounded, -apple-system, system-ui";
+        ctx.textAlign="center";ctx.fillText(p.glyph,p.x,p.y);}
+      else{ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.3);ctx.fillStyle=p.color;ctx.fill();}
+      ctx.restore();
+    }
+    if(anyRain){ /* dashed μ line at the center of the forming curve */
+      ctx.save();ctx.globalAlpha=.3;ctx.strokeStyle="#16324A";ctx.setLineDash([5,6]);ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(W/2,H-96);ctx.lineTo(W/2,H-268);ctx.stroke();ctx.setLineDash([]);
+      ctx.font="800 15px ui-rounded, -apple-system, system-ui";ctx.textAlign="center";ctx.fillStyle="#16324A";
+      ctx.fillText("μ",W/2,H-276);ctx.restore();
+    }
+    if(!anyRain&&rainCount<=0&&bins.some(function(b){return b>0;})){bins=new Array(Math.ceil(W/BINW)+1).fill(0);rainCount=0;}
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ============ hearts & daily ============ */
+function regenHearts(){
+  var h=state.hearts,now=Date.now(),changed=false;
+  if(h.n>=HEART_MAX){h.last=now;return;}
+  while(h.n<HEART_MAX&&now-h.last>=HEART_REGEN_MS){h.n++;h.last+=HEART_REGEN_MS;changed=true;}
+  if(h.n>=HEART_MAX){h.last=now;}
+  if(changed){save();renderTop();}
+}
+function spendHeart(){state.hearts.n=Math.max(0,state.hearts.n-1);if(state.hearts.n<HEART_MAX-1){}else{state.hearts.last=Date.now();}save();renderTop();}
+function gainHeart(){if(state.hearts.n<HEART_MAX){state.hearts.n++;save();}renderTop();}
+function rollDaily(){var t=dayStr(new Date());if(state.daily.day!==t){state.daily={day:t,xp:0,goalHit:false};save();}}
+function markStreak(){
+  var today=dayStr(new Date()),yester=dayStr(new Date(Date.now()-DAY)),s=state.streak;
+  if(s.last!==today){s.count=(s.last===yester)?s.count+1:1;s.last=today;save();
+    toast("🔥 Day "+s.count+" streak — logged!",2600);}
+}
+function awardXP(n){state.xp+=n;rollDaily();state.daily.xp+=n;
+  if(!state.daily.goalHit&&state.daily.xp>=state.goal){state.daily.goalHit=true;
+    setTimeout(function(){toast("⚡ Daily goal smashed!",2800);burst(W/2,120,40,1.2);},400);}
+  save();}
+
+/* ============ renders ============ */
+function renderTop(){
+  document.getElementById("streakn").textContent=state.streak.count;
+  document.getElementById("heartsn").textContent=state.hearts.n;
+  rollDaily();
+  var pct=Math.min(1,state.daily.xp/state.goal);
+  document.getElementById("goalring").style.strokeDashoffset=String(163.4*(1-pct));
+  document.getElementById("goaln").textContent=Math.round(pct*100)+"%";
+  document.getElementById("goaltext").textContent=state.daily.xp+" / "+state.goal+" XP today";
+  document.getElementById("xptotal").textContent=state.xp+" XP total";
+}
+function lessonUnlocked(idx){if(idx===0)return true;var prev=LESSONS[idx-1];return !!state.prog[prev.lesson.id];}
+function renderPath(){
+  var wrap=document.getElementById("pathwrap");var html="";var gi=0;var pat=["c","l","r"];
+  var nextFound=false;
+  CONTENT.forEach(function(u){
+    html+='<div class="unit-head"><span class="ic">'+u.icon+'</span><span><div class="t">'+esc(u.title)+'</div><div class="d">'+esc(u.desc)+'</div></span></div><div class="path">';
+    u.lessons.forEach(function(l){
+      var idx=LESSONS.findIndex(function(x){return x.lesson.id===l.id;});
+      var p=state.prog[l.id];var unlocked=lessonUnlocked(idx);
+      var cls="node";var inner;
+      if(p){cls+=" done";inner='<span class="ic">✓</span><span class="stars">'+"★".repeat(p.stars)+"☆".repeat(3-p.stars)+'</span>';}
+      else if(unlocked&&!nextFound){cls+=" next";nextFound=true;inner='<span class="ic">📖</span>';}
+      else if(unlocked){inner='<span class="ic">📖</span>';}
+      else{cls+=" locked";inner='<span class="ic">🔒</span>';}
+      html+='<div class="node-row '+pat[gi%3]+'"><button class="'+cls+'" data-act="open-lesson" data-id="'+l.id+'">'+inner+
+        '<span class="lbl">'+esc(l.title)+'</span></button></div>';
+      gi++;
+    });
+    html+='</div>';
+  });
+  wrap.innerHTML=html;
+}
+function renderNotes(){
+  var el=document.getElementById("fnlist");
+  el.innerHTML=state.cards.length?state.cards.map(function(c){
+    return '<div class="fn-item"><div class="q">'+esc(c.q)+'</div><div class="meta">'+
+      '<span class="muted" style="flex:1">'+(state.wrong[c.id]?("missed ×"+state.wrong[c.id]):"in the practice mix")+'</span>'+
+      '<button class="linkbtn" data-act="fn-del" data-id="'+c.id+'">Delete</button></div></div>';
+  }).join(""):'<div class="empty">No cards yet — capture your first hard-won lesson 📓</div>';
+}
+function renderStats(){
+  document.getElementById("st-xp").textContent=state.xp;
+  document.getElementById("st-streak").textContent=state.streak.count;
+  var lessons=Object.keys(state.prog).length;
+  document.getElementById("st-lessons").textContent=lessons;
+  var accs=Object.keys(state.prog).map(function(k){return state.prog[k].acc;});
+  document.getElementById("st-acc").textContent=accs.length?Math.round(accs.reduce(function(a,b){return a+b;},0)/accs.length*100)+"%":"–";
+  var weak=Object.keys(state.wrong).map(function(id){return {id:id,n:state.wrong[id]};})
+    .sort(function(a,b){return b.n-a.n;}).slice(0,5);
+  document.getElementById("weakest").innerHTML=weak.length?weak.map(function(w){
+    var it=ITEM_INDEX[w.id];if(!it){return "";}
+    return '<div class="fn-item"><div class="q">'+esc(it.q)+'</div><div class="meta"><span class="muted">missed ×'+w.n+'</span></div></div>';
+  }).join(""):'<div class="empty">Nothing yet — go get some things wrong, it\'s good for you 😄</div>';
+}
+function renderPracticeInfo(){
+  var pool=practicePool();
+  document.getElementById("pracpool").textContent=pool.length?(pool.length+" questions in your pool"):"Complete your first lesson to unlock practice";
+}
+function renderAll(){renderTop();renderPath();renderNotes();renderStats();renderPracticeInfo();}
+
+/* ============ practice pool ============ */
+function practicePool(){
+  var pool=[];
+  Object.keys(state.prog).forEach(function(lid){
+    var L=LESSONS.find(function(x){return x.lesson.id===lid;});
+    if(L){L.lesson.items.forEach(function(it){pool.push(it);});}
+  });
+  state.cards.forEach(function(c){pool.push(ITEM_INDEX[c.id]);});
+  return pool;
+}
+function samplePractice(){
+  var pool=practicePool();if(!pool.length){return [];}
+  var weighted=[];
+  pool.forEach(function(it){var w=1+(state.wrong[it.id]||0)*2;for(var i=0;i<w;i++){weighted.push(it);}});
+  var picked=[],used={};
+  var guard=0;
+  while(picked.length<Math.min(PRACTICE_SIZE,pool.length)&&guard<500){
+    guard++;var it=weighted[Math.floor(Math.random()*weighted.length)];
+    if(!used[it.id]){used[it.id]=true;picked.push(it);}
+  }
+  return picked;
+}
+
+/* ============ lesson player ============ */
+var S=null; /* session */
+function startSession(items,mode,lessonId){
+  S={queue:items.slice(),i:0,mode:mode,lessonId:lessonId,total:items.length,attempted:{},firstTry:0,answered:0,sel:null,num:"",checked:false,xp:0};
+  document.getElementById("player").classList.add("on");
+  renderQ();
+}
+function curItem(){return S.queue[S.i];}
+function renderQ(){
+  var it=curItem();
+  document.getElementById("plhearts").textContent=S.mode==="lesson"?("❤️"+state.hearts.n):"🎯";
+  document.getElementById("plfill").style.width=Math.round(S.answered/S.total*100)+"%";
+  var html='<div class="qkind">'+esc(it.k||"Question")+'</div><div class="qtext">'+esc(it.q)+'</div>';
+  if(it.ctx){html+='<div class="qctx">'+it.ctx+'</div>';}
+  if(it.t==="num"){
+    html+='<div class="numwrap"><div class="numval" id="numval">&nbsp;</div><div class="pad">'+
+      ["7","8","9","4","5","6","1","2","3",".","0","⌫"].map(function(k){return '<button data-pad="'+k+'">'+k+'</button>';}).join("")+
+      '</div></div>';
+  }else{
+    var order=it.o.map(function(_,i){return i;});
+    for(var i=order.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var tmp=order[i];order[i]=order[j];order[j]=tmp;}
+    S.order=order;
+    html+='<div class="choices">'+order.map(function(oi,pos){
+      return '<button class="choice" data-choice="'+pos+'">'+esc(it.o[oi])+'</button>';}).join("")+'</div>';
+  }
+  document.getElementById("plbody").innerHTML=html;
+  S.sel=null;S.num="";S.checked=false;
+  document.getElementById("fb").className="fb";
+  document.getElementById("checkrow").style.display="block";
+  document.getElementById("checkbtn").disabled=true;
+  document.querySelector(".pl-body").scrollTop=0;
+}
+function showFeedback(ok,it){
+  var fb=document.getElementById("fb");
+  fb.className="fb show "+(ok?"ok":"no");
+  document.getElementById("fbh").textContent=ok?["Nailed it! 🎉","Correct ✓","Beautiful stats 🤌","That's the one ✨"][Math.floor(Math.random()*4)]:
+    "Not quite — the answer: "+(it.t==="num"?it.a:it.o[it.a]);
+  document.getElementById("fbex").textContent=it.ex||"";
+  document.getElementById("checkrow").style.display="none";
+}
+function checkAnswer(){
+  var it=curItem();if(S.checked){return;}
+  var ok;
+  if(it.t==="num"){var v=parseFloat(S.num);ok=isFinite(v)&&Math.abs(v-it.a)<=(it.tol||0.01);}
+  else{if(S.sel==null){return;}ok=S.order[S.sel]===it.a;
+    document.querySelectorAll(".choice").forEach(function(b,pos){
+      b.disabled=true;
+      if(S.order[pos]===it.a){b.classList.add("correct");}
+      else if(pos===S.sel){b.classList.add("wrong");}
+    });}
+  S.checked=true;
+  var first=!S.attempted[it.id];
+  if(first){S.attempted[it.id]=true;}
+  if(ok){
+    S.answered=Math.min(S.total,S.answered+ (first?1:1));
+    if(first){S.firstTry++;var gain=S.mode==="lesson"?10:5;S.xp+=gain;awardXP(gain);}
+    burst(W/2,H*0.5,12,.9);
+  }else{
+    state.wrong[it.id]=(state.wrong[it.id]||0)+1;save();
+    if(S.mode==="lesson"){spendHeart();document.getElementById("plhearts").textContent="❤️"+state.hearts.n;
+      S.queue.push(it);/* see it again until beaten */}
+    else{S.answered=Math.min(S.total,S.answered+1);}
+  }
+  S.lastOk=ok;
+  showFeedback(ok,it);
+}
+function nextQ(){
+  if(S.mode==="lesson"&&state.hearts.n<=0){endSession(false);return;}
+  S.i++;
+  if(S.i>=S.queue.length){endSession(true);return;}
+  renderQ();
+}
+function endSession(success){
+  var pl=document.getElementById("player");
+  if(!success){
+    pl.classList.remove("on");
+    openSheet("heartsheet");
+    renderAll();return;
+  }
+  var acc=S.total?S.firstTry/S.total:0;
+  var html;
+  if(S.mode==="lesson"){
+    var stars=acc>=0.999?3:(acc>=0.75?2:1);
+    var prev=state.prog[S.lessonId];
+    if(!prev||stars>prev.stars||acc>prev.acc){state.prog[S.lessonId]={stars:Math.max(stars,prev?prev.stars:0),acc:Math.max(acc,prev?prev.acc:0)};}
+    if(acc>=0.999){S.xp+=20;awardXP(20);}
+    state.completions++;
+    markStreak();save();
+    html='<div class="endwrap"><div class="big">Lesson complete! 🛬</div>'+
+      '<div class="stars-big">'+"★".repeat(stars)+"☆".repeat(3-stars)+'</div>'+
+      '<div class="endtiles"><div class="endtile"><div class="n">+'+S.xp+'</div><div class="l">XP</div></div>'+
+      '<div class="endtile"><div class="n">'+Math.round(acc*100)+'%</div><div class="l">First try</div></div>'+
+      '<div class="endtile"><div class="n">'+state.hearts.n+'</div><div class="l">Hearts left</div></div></div>'+
+      '<button class="btn good" style="padding:15px 40px" data-act="close-player">Continue</button></div>';
+  }else{
+    gainHeart();markStreak();save();
+    html='<div class="endwrap"><div class="big">Practice done! 🎯</div>'+
+      '<div class="endtiles"><div class="endtile"><div class="n">+'+S.xp+'</div><div class="l">XP</div></div>'+
+      '<div class="endtile"><div class="n">❤️+1</div><div class="l">Heart earned</div></div></div>'+
+      '<button class="btn good" style="padding:15px 40px" data-act="close-player">Continue</button></div>';
+  }
+  document.getElementById("plbody").innerHTML=html;
+  document.getElementById("checkrow").style.display="none";
+  document.getElementById("fb").className="fb";
+  document.getElementById("plfill").style.width="100%";
+  if(S.mode==="lesson"&&(UNIT_FINAL[S.lessonId]||state.completions%3===0)){bellRain(120);}
+  else{mega();}
+}
+
+/* ============ sheets & views ============ */
+function show(view){
+  document.querySelectorAll(".view").forEach(function(v){v.classList.toggle("on",v.id==="view-"+view);});
+  document.querySelectorAll(".navbtn").forEach(function(b){b.classList.toggle("on",b.dataset.view===view);});
+  window.scrollTo(0,0);
+}
+function openSheet(id){document.getElementById("backdrop").classList.add("show");document.getElementById(id).classList.add("show");}
+function closeSheets(){document.getElementById("backdrop").classList.remove("show");
+  document.querySelectorAll(".sheet").forEach(function(s){s.classList.remove("show");});}
+var pendingLesson=null,fnCorrect=0;
+
+/* ============ actions ============ */
+document.addEventListener("click",function(e){
+  var pad=e.target.closest("[data-pad]");
+  if(pad){var k=pad.dataset.pad;
+    if(k==="⌫"){S.num=S.num.slice(0,-1);}else if(S.num.length<8){if(k==="."&&S.num.indexOf(".")>=0){}else{S.num+=k;}}
+    document.getElementById("numval").textContent=S.num||" ";
+    document.getElementById("checkbtn").disabled=!S.num.length;return;}
+  var ch=e.target.closest(".choice");
+  if(ch&&!S.checked){document.querySelectorAll(".choice").forEach(function(b){b.classList.remove("sel");});
+    ch.classList.add("sel");S.sel=+ch.dataset.choice;document.getElementById("checkbtn").disabled=false;return;}
+  var radio=e.target.closest("[data-fnradio]");
+  if(radio){fnCorrect=+radio.dataset.fnradio;
+    document.querySelectorAll("[data-fnradio]").forEach(function(r){r.classList.toggle("on",r===radio);});return;}
+  var goalc=e.target.closest("[data-goal]");
+  if(goalc){state.goal=+goalc.dataset.goal;save();renderTop();
+    document.querySelectorAll("#goalchips .btn").forEach(function(b){b.className="btn "+(+b.dataset.goal===state.goal?"":"ghost");b.style.flex="1";b.style.margin="0";});
+    toast("Daily goal: "+state.goal+" XP ⚡");return;}
+  var nav=e.target.closest(".navbtn");if(nav){show(nav.dataset.view);return;}
+  var el=e.target.closest("[data-act]");if(!el){return;}
+  var act=el.dataset.act,id=el.dataset.id;
+  switch(act){
+    case "open-lesson":
+      var idx=LESSONS.findIndex(function(x){return x.lesson.id===id;});
+      if(!lessonUnlocked(idx)){toast("🔒 Finish the previous lesson first");return;}
+      pendingLesson=LESSONS[idx];
+      document.getElementById("ls-title").textContent=pendingLesson.unit.icon+" "+pendingLesson.lesson.title;
+      var p=state.prog[id];
+      document.getElementById("ls-sub").textContent=pendingLesson.lesson.items.length+" questions · +10 XP each · perfect run +20"+
+        (p?(" · best: "+"★".repeat(p.stars)+" ("+Math.round(p.acc*100)+"%)"):"");
+      openSheet("lessonsheet");break;
+    case "start-lesson":
+      closeSheets();
+      if(state.hearts.n<=0){openSheet("heartsheet");return;}
+      startSession(pendingLesson.lesson.items,"lesson",pendingLesson.lesson.id);break;
+    case "start-practice":case "practice-from-sheet":
+      closeSheets();
+      var items=samplePractice();
+      if(!items.length){toast("Complete your first lesson to unlock practice 📖");return;}
+      startSession(items,"practice",null);break;
+    case "check":checkAnswer();break;
+    case "continue":nextQ();break;
+    case "quit-lesson":
+      document.getElementById("player").classList.remove("on");S=null;renderAll();
+      toast("Lesson abandoned — the hearts stay spent 😅");break;
+    case "close-player":
+      document.getElementById("player").classList.remove("on");S=null;renderAll();break;
+    case "fn-add":
+      ["fn-q","fn-o0","fn-o1","fn-o2","fn-o3","fn-ex"].forEach(function(fid){document.getElementById(fid).value="";});
+      fnCorrect=0;document.querySelectorAll("[data-fnradio]").forEach(function(r,i){r.classList.toggle("on",i===0);});
+      openSheet("fnsheet");break;
+    case "fn-save":
+      var q=document.getElementById("fn-q").value.trim();
+      var opts=[0,1,2,3].map(function(i){return document.getElementById("fn-o"+i).value.trim();});
+      var kept=[],newCorrect=-1;
+      opts.forEach(function(o,i){if(o){if(i===fnCorrect){newCorrect=kept.length;}kept.push(o);}});
+      if(!q){toast("Write the question first ✍️");return;}
+      if(kept.length<2){toast("Need at least 2 options");return;}
+      if(newCorrect<0){toast("Your correct option is empty 🤔");return;}
+      var card={id:uid(),q:q,o:kept,a:newCorrect,ex:document.getElementById("fn-ex").value.trim(),added:Date.now()};
+      state.cards.push(card);
+      ITEM_INDEX[card.id]={t:"mcq",k:"Field note",q:card.q,o:card.o,a:card.a,ex:card.ex,id:card.id};
+      save();renderNotes();renderPracticeInfo();closeSheets();
+      burstFrom(el,20,1);toast("Card saved — it's in the practice mix 📓");break;
+    case "fn-del":
+      state.cards=state.cards.filter(function(c){return c.id!==id;});save();renderNotes();renderPracticeInfo();break;
+    case "open-settings":
+      document.querySelectorAll("#goalchips .btn").forEach(function(b){b.className="btn "+(+b.dataset.goal===state.goal?"":"ghost");b.style.flex="1";b.style.margin="0";});
+      openSheet("setsheet");break;
+    case "close-sheets":closeSheets();break;
+    case "streak-info":
+      toast("🔥 "+state.streak.count+"-day streak. Complete any lesson or practice today to keep it.");break;
+    case "hearts-info":
+      if(state.hearts.n>=HEART_MAX){toast("❤️ Full hearts — fly free.");}
+      else{var mins=Math.ceil((HEART_REGEN_MS-(Date.now()-state.hearts.last))/60000);
+        toast("❤️ "+state.hearts.n+"/"+HEART_MAX+" — next heart in ~"+mins+" min, or practice for one now.");}
+      break;
+    case "export-data":
+      var io=document.getElementById("io");io.value=JSON.stringify(state);io.select();
+      try{navigator.clipboard.writeText(io.value).then(function(){toast("Backup copied 💾");})
+        .catch(function(){toast("Backup ready below — copy it 💾");});}
+      catch(err){toast("Backup ready below — copy it 💾");}
+      break;
+    case "import-data":
+      try{var inc=JSON.parse(document.getElementById("io").value);
+        if(inc&&inc.v===1&&inc.hearts&&inc.prog!=null){state=inc;
+          state.cards.forEach(function(c){ITEM_INDEX[c.id]={t:"mcq",k:"Field note",q:c.q,o:c.o,a:c.a,ex:c.ex,id:c.id};});
+          save();renderAll();closeSheets();toast("Backup restored ✅");}
+        else{toast("That doesn't look like a backup 🤔");}}
+      catch(err){toast("Couldn't read that backup 🤔");}
+      break;
+  }
+});
+
+/* ============ boot ============ */
+regenHearts();
+setInterval(regenHearts,60000);
+rollDaily();
+renderAll();
+if("serviceWorker" in navigator&&location.protocol==="https:"){
+  window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});
+}
+})();
+</script>
+</body>
+</html>
